@@ -1,25 +1,29 @@
+use bevy::prelude::*;
+
 mod config_plugin;
-mod kitty_plugin;
+mod camera_plugin;
 mod loading_plugin;
+mod kitty_plugin;
 
-pub use crate::config_plugin::{
-    get_world_position, CameraFlag, ConfigPlugin, ASPECT_RATIO, HEIGHT, WIDTH,
-};
-pub use crate::loading_plugin::{LoadingPlugin, TextureAssets};
+use config_plugin::ConfigPlugin;
+use loading_plugin::LoadingPlugin;
+use camera_plugin::CameraPlugin;
+use kitty_plugin::KittyPlugin;
 
-use crate::kitty_plugin::KittyPlugin;
-use bevy::prelude::{App, Plugin};
-
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
 enum GameState {
-    Load,
-    Play,
+    #[default]
+    Loading,
+    Playing,
 }
 
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(LoadingPlugin).add_plugin(KittyPlugin);
+        app.add_plugin(ConfigPlugin)
+            .add_plugin(LoadingPlugin)
+            .add_plugin(CameraPlugin)
+            .add_plugin(KittyPlugin);
     }
 }

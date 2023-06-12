@@ -17,18 +17,23 @@ lto = true
 codegen-units = 1
 
 [features]
-dev = [
-    "bevy/dynamic",
-]
+dev = ["bevy/dynamic_linking"]
 
 [dependencies]
-bevy = { version = "0.9", default-features = false, features = ["bevy_asset", "bevy_winit", "render", "png", "x11"] }
-bevy_kira_audio = "0.13"
-bevy_asset_loader = { version = "0.14.1", features = ["standard_dynamic_assets"] }
-rand = "0.8.3"
-bevy-inspector-egui = "0.14.0"
-bevy-debug-text-overlay = "4.0.1"
-winit = { version = "0.27.4", default-features = false }
+bevy = { version = "0.10", default-features = false, features = [
+  "bevy_asset",
+  "bevy_winit",
+  "bevy_render",
+  "bevy_sprite",
+  "png",
+  "x11",
+] }
+bevy_kira_audio = "0.15"
+bevy_asset_loader = { version = "0.16", features = ["standard_dynamic_assets"] }
+rand = "0.8"
+bevy-inspector-egui = "0.18"
+bevy-debug-text-overlay = "5.1"
+winit = { version = "0.28", default-features = false }
 image = { version = "0.24", default-features = false }
 
 [build-dependencies]

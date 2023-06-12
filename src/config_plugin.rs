@@ -1,92 +1,101 @@
-use std::io::Cursor;
-use winit::window::Icon;
-
-// use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-// use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::prelude::*;
-use bevy::render::camera::ScalingMode;
-use bevy::window::WindowId;
-use bevy::winit::WinitWindows;
-use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
-// use bevy_inspector_egui::WorldInspectorPlugin;
+use bevy::window::{PresentMode, WindowResolution};
 
-use crate::GameState;
+#[cfg(debug_assertions)]
+use {
+    bevy_inspector_egui::quick::WorldInspectorPlugin,
+    bevy::diagnostic::{FrameTimeDiagnosticsPlugin, Diagnostics},
+    bevy::input::common_conditions::input_toggle_active,
+    bevy::window::PrimaryWindow,
+    bevy_debug_text_overlay::{screen_print, OverlayPlugin},
+    crate::GameState,
+};
 
-pub const ASPECT_RATIO: f32 = 16. / 10.;
-pub const WIDTH: f32 = 90.;
-pub const HEIGHT: f32 = WIDTH / ASPECT_RATIO;
+pub const ASPECT_RATIO: f32 = 10. / 16.;
+pub const WIDTH: f32 = 500.;
+pub const HEIGHT: f32 = WIDTH * ASPECT_RATIO;
 
-pub struct ConfigPlugin;
+#[cfg(debug_assertions)]
+#[derive(Resource, Default)]
+pub struct DebugOptions {
+    printed_info_enabled: bool,
+}
 
 #[derive(Component)]
 pub struct CameraFlag;
 
+pub struct ConfigPlugin;
+
 impl Plugin for ConfigPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Msaa { samples: 1 })
+        app
+            .insert_resource(Msaa::Sample4)
             .insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
             .add_plugins(
                 DefaultPlugins
                     .set(WindowPlugin {
-                        window: WindowDescriptor {
+                        primary_window: Some(Window {
                             title: "bevy_trunk_template".to_string(),
                             canvas: Some("#bevy".to_owned()),
                             fit_canvas_to_parent: true,
-                            width: 500.,
-                            height: 800.,
+                            present_mode: PresentMode::AutoVsync,
+                            resolution: WindowResolution::new(WIDTH, HEIGHT),
                             ..default()
-                        },
+                        }),
+                        ..default()
+                    })
+                    .set(AssetPlugin {
+                        watch_for_changes: true,
                         ..default()
                     })
                     .set(ImagePlugin::default_nearest()),
-            )
-            .add_startup_system(camera_setup)
-            .add_startup_system(window_icon_setup);
+            );
 
         #[cfg(debug_assertions)]
         {
-            app.add_plugin(OverlayPlugin::default())
-                // .add_plugin(FrameTimeDiagnosticsPlugin::default())
-                // .add_plugin(LogDiagnosticsPlugin::default())
-                // .add_plugin(WorldInspectorPlugin::new())
+            app
+                .insert_resource(DebugOptions::default())
+                .add_plugin(OverlayPlugin::default())
+                .add_plugin(FrameTimeDiagnosticsPlugin::default())
+                .add_plugin(WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::Key2)))
+                .add_system(debug_toggle_system)
                 .add_system(debug_system);
         }
     }
 }
 
-fn camera_setup(mut commands: Commands) {
-    commands
-        .spawn(Camera2dBundle {
-            projection: OrthographicProjection {
-                scaling_mode: ScalingMode::FixedHorizontal(WIDTH),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .insert(CameraFlag);
-}
-
-fn window_icon_setup(windows: NonSend<WinitWindows>) {
-    let primary = windows.get_window(WindowId::primary()).unwrap();
-    let icon_buf = Cursor::new(include_bytes!("../assets/textures/app_icon.png"));
-    if let Ok(image) = image::load(icon_buf, image::ImageFormat::Png) {
-        let image = image.into_rgba8();
-        let (width, height) = image.dimensions();
-        let rgba = image.into_raw();
-        let icon = Icon::from_rgba(rgba, width, height).unwrap();
-        primary.set_window_icon(Some(icon));
-    };
-}
-
-fn debug_system(time: Res<Time>, windows: Res<Windows>, app_state: Res<State<GameState>>) {
+#[cfg(debug_assertions)]
+fn debug_system(
+    time: Res<Time>,
+    debug_options: Res<DebugOptions>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    app_state: Res<State<GameState>>,
+    diagnostics: Res<Diagnostics>,
+) {
     let current_time = time.elapsed_seconds();
     let at_interval = |t: f32| current_time % t < time.delta_seconds();
-    if at_interval(1.) {
-        let window = windows.get_primary().unwrap();
-        screen_print!(col: Color::RED, "game state: {:?}", app_state.current());
-        if let Some(position) = window.cursor_position() {
-            screen_print!(col: Color::CYAN, "cursor_position: {}", position);
+    if debug_options.printed_info_enabled && at_interval(0.25) {
+        if let Some(fps) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
+            if let Some(fps) = fps.value() {
+                screen_print!(sec: 0.3, col: Color::CYAN, "fps: {fps}");
+            };
         };
+        screen_print!(sec: 0.3, col: Color::CYAN, "game state: {:?}", app_state.0);
+        if let Ok(window) = window_query.get_single() {
+            if let Some(position) = window.cursor_position() {
+                screen_print!(sec: 0.3, col: Color::CYAN, "cursor_position: {}", position);
+            };
+        };
+    }
+}
+
+#[cfg(debug_assertions)]
+fn debug_toggle_system(
+    input: Res<Input<KeyCode>>,
+    mut debug_options: ResMut<DebugOptions>,
+) {
+    if input.just_pressed(KeyCode::Key1) {
+        debug_options.printed_info_enabled = !debug_options.printed_info_enabled;
     }
 }
 
