@@ -3,12 +3,12 @@ use bevy::window::{PresentMode, WindowResolution};
 
 #[cfg(debug_assertions)]
 use {
-    bevy_inspector_egui::quick::WorldInspectorPlugin,
-    bevy::diagnostic::{FrameTimeDiagnosticsPlugin, Diagnostics},
+    crate::GameState,
+    bevy::diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
     bevy::input::common_conditions::input_toggle_active,
     bevy::window::PrimaryWindow,
     bevy_debug_text_overlay::{screen_print, OverlayPlugin},
-    crate::GameState,
+    bevy_inspector_egui::quick::WorldInspectorPlugin,
 };
 
 pub const ASPECT_RATIO: f32 = 10. / 16.;
@@ -28,8 +28,7 @@ pub struct ConfigPlugin;
 
 impl Plugin for ConfigPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(Msaa::Sample4)
+        app.insert_resource(Msaa::Sample4)
             .insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
             .add_plugins(
                 DefaultPlugins
@@ -53,11 +52,13 @@ impl Plugin for ConfigPlugin {
 
         #[cfg(debug_assertions)]
         {
-            app
-                .insert_resource(DebugOptions::default())
+            app.insert_resource(DebugOptions::default())
                 .add_plugin(OverlayPlugin::default())
                 .add_plugin(FrameTimeDiagnosticsPlugin::default())
-                .add_plugin(WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::Key2)))
+                .add_plugin(
+                    WorldInspectorPlugin::default()
+                        .run_if(input_toggle_active(false, KeyCode::Key2)),
+                )
                 .add_system(debug_toggle_system)
                 .add_system(debug_system);
         }
@@ -90,10 +91,7 @@ fn debug_system(
 }
 
 #[cfg(debug_assertions)]
-fn debug_toggle_system(
-    input: Res<Input<KeyCode>>,
-    mut debug_options: ResMut<DebugOptions>,
-) {
+fn debug_toggle_system(input: Res<Input<KeyCode>>, mut debug_options: ResMut<DebugOptions>) {
     if input.just_pressed(KeyCode::Key1) {
         debug_options.printed_info_enabled = !debug_options.printed_info_enabled;
     }
