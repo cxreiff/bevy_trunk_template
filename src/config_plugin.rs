@@ -43,10 +43,6 @@ impl Plugin for ConfigPlugin {
                         }),
                         ..default()
                     })
-                    .set(AssetPlugin {
-                        watch_for_changes: true,
-                        ..default()
-                    })
                     .set(ImagePlugin::default_nearest()),
             );
 
